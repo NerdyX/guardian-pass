@@ -1,0 +1,15 @@
+{
+  "name": "ilp-rafiki-evm-relayer",
+  "version": "1.0.0",
+  "description": "Rafiki and ILPv4 Webhook Relayer for AuthSubscriptionNFT across any EVM network",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "test:mock": "node mock-rafiki-webhook.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.7",
+    "ethers": "^6.13.5"
+  }
+}

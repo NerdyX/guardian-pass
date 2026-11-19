@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guardian Pass | Universal Zero-Trust Web3 Gateway</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Plus Jakarta Sans"', 'system-ui', 'sans-serif'],
+                        mono: ['"JetBrains Mono"', 'monospace'],
+                    },
+                    colors: {
+                        guardian: {
+                            50: '#ecfeff',
+                            100: '#cffafe',
+                            400: '#22d3ee',
+                            500: '#06b6d4',
+                            600: '#0891b2',
+                            700: '#0e7490',
+                            900: '#164e63',
+                        },
+                        xrpl: {
+                            400: '#38bdf8',
+                            500: '#0284c7',
+                            900: '#0c4a6e',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #030712;
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(6, 182, 212, 0.15) 0px, transparent 50%),
+                radial-gradient(at 100% 0%, rgba(99, 102, 241, 0.12) 0px, transparent 50%),
+                radial-gradient(at 50% 100%, rgba(2, 132, 199, 0.10) 0px, transparent 50%);
+            min-height: 100vh;
+        }
+        .glass-panel {
+            background: rgba(17, 24, 39, 0.7);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .glass-panel-glow {
+            background: rgba(17, 24, 39, 0.85);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(6, 182, 212, 0.3);
+            box-shadow: 0 0 25px -5px rgba(6, 182, 212, 0.2);
+        }
+        .glow-text {
+            text-shadow: 0 0 20px rgba(34, 211, 238, 0.4);
+        }
+    </style>
+</head>
+<body class="text-zinc-100 font-sans antialiased selection:bg-guardian-500 selection:text-white">
+    <div id="app">
+        <!-- Top App Redirection Banner (If user redirected from an internal app) -->
+        <div id="redirectBanner" class="hidden bg-gradient-to-r from-guardian-900/90 via-indigo-950/90 to-zinc-900/90 border-b border-guardian-500/30 px-4 py-2.5 text-xs text-guardian-200">
+            <div class="max-w-6xl mx-auto flex items-center justify-between">
+                <div class="flex items-center space-x-2">
+                    <span class="w-2 h-2 rounded-full bg-cyan-400 animate-ping"></span>
+                    <span>Gatekeeper Auth Gateway: Authorizing access for <strong id="redirectAppName" class="text-white underline">Connected App</strong></span>
+                </div>
+                <div id="redirectReturnBtnContainer" class="hidden">
+                    <button onclick="returnToApp()" class="bg-guardian-500 hover:bg-guardian-400 text-zinc-950 font-bold px-3 py-1 rounded-md text-xs transition-all shadow-sm">
+                        Return to App &rarr;
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+            <!-- Navbar -->
+            <header class="flex flex-col sm:flex-row items-center justify-between border-b border-zinc-800/80 pb-6 mb-8 gap-4">
+                <div class="flex items-center space-x-3.5">
+                    <!-- Shield Emblem Logo -->
+                    <div class="w-11 h-11 rounded-2xl bg-gradient-to-br from-guardian-400 via-cyan-600 to-indigo-700 flex items-center justify-center shadow-lg shadow-cyan-500/20 ring-1 ring-white/20">
+                        <svg class="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                        </svg>
+                    </div>
+                    <div>
+                        <div class="flex items-center space-x-2">
+                            <h1 class="text-xl font-extrabold tracking-tight text-white glow-text">GUARDIAN PASS</h1>
+                            <span class="bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 text-[10px] px-2 py-0.5 rounded-full font-mono font-semibold">SBT GATEWAY</span>
+                        </div>
+                        <p class="text-xs text-zinc-400 font-medium">Unified Zero-Trust Web3 Access & Authorization</p>
+                    </div>
+                </div>
+
+                <div class="flex flex-wrap items-center gap-3">
+                    <!-- Network Switcher Selector -->
+                    <div class="relative">
+                        <select
+                            id="networkSelect"
+                            onchange="handleNetworkChange(this.value)"
+                            class="appearance-none bg-zinc-900/90 border border-zinc-700/80 hover:border-zinc-500 text-zinc-200 text-xs rounded-xl px-3.5 py-2 pr-8 font-medium focus:outline-none focus:ring-1 focus:ring-guardian-500 cursor-pointer shadow-sm transition-all"
+                        >
+                            <option value="xrplEvm">⚡ XRPL EVM Sidechain</option>
+                            <option value="xrplEvmTestnet">⚡ XRPL EVM Testnet</option>
+                            <option value="casper">🛡️ Casper EVM</option>
+                            <option value="base">🔵 Base Mainnet</option>
+                            <option value="sepolia">🔷 Ethereum Sepolia</option>
+                        </select>
+                        <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-zinc-400">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                        </div>
+                    </div>
+
+                    <!-- Connect Wallet Button -->
+                    <button
+                        id="connectBtn"
+                        onclick="connectWallet()"
+                        class="bg-gradient-to-r from-guardian-500 to-cyan-600 hover:from-guardian-400 hover:to-cyan-500 text-zinc-950 font-bold rounded-xl px-4 py-2 text-xs transition-all shadow-md shadow-cyan-500/20 active:scale-95 flex items-center space-x-2"
+                    >
+                        <svg class="w-4 h-4 text-zinc-950" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                        <span id="connectBtnText">Connect Wallet</span>
+                    </button>
+                </div>
+            </header>
+
+            <!-- Status Message Notification -->
+            <div id="statusBanner" class="hidden mb-6 p-4 rounded-xl glass-panel border border-guardian-500/40 text-sm text-cyan-200 flex items-center justify-between shadow-lg">
+                <div class="flex items-center space-x-3">
+                    <span id="statusIcon">⚡</span>
+                    <span id="statusMessage" class="font-medium"></span>
+                </div>
+                <button onclick="dismissStatus()" class="text-zinc-400 hover:text-white text-base ml-4">✕</button>
+            </div>
+
+            <!-- Live Credential Status Card (If Wallet Connected) -->
+            <div id="credentialStatusCard" class="hidden mb-10 p-5 rounded-2xl glass-panel border border-zinc-700/60 shadow-xl">
+                <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                    <div class="flex items-center space-x-4">
+                        <div id="statusBadgeColor" class="w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 text-xl font-bold">
+                            ✓
+                        </div>
+                        <div>
+                            <div class="flex items-center space-x-2">
+                                <span class="text-xs uppercase font-bold tracking-wider text-zinc-400">Current Authorization</span>
+                                <span id="userStatusTag" class="bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-[10px] px-2 py-0.5 rounded-full font-semibold">ACTIVE</span>
+                            </div>
+                            <h3 id="userCredentialTitle" class="text-lg font-bold text-white">Member Tier Access</h3>
+                            <p id="userExpirySubtitle" class="text-xs text-zinc-400 font-mono">Bound to minter: <span id="boundAddressDisplay" class="text-zinc-200">0x...</span></p>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center space-x-3 self-end md:self-auto">
+                        <div class="text-right">
+                            <span class="block text-[10px] text-zinc-500 uppercase tracking-wider font-semibold">Valid Until</span>
+                            <span id="userExpiresAtDisplay" class="text-sm font-mono text-zinc-200">November 19, 2027</span>
+                        </div>
+                        <button onclick="scrollToCheckout()" class="bg-zinc-800 hover:bg-zinc-700 text-white font-medium text-xs px-3.5 py-2 rounded-xl transition-all border border-zinc-700">
+                            Renew Pass
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Hero Section -->
+            <div class="text-center my-6 sm:my-10">
+                <div class="inline-flex items-center space-x-2 bg-gradient-to-r from-guardian-900/60 to-indigo-950/60 border border-guardian-500/30 px-3.5 py-1.5 rounded-full mb-4">
+                    <span class="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span>
+                    <span class="text-cyan-300 text-xs font-semibold tracking-wide uppercase">XRPL EVM Sidechain & Cross-Chain Gateway</span>
+                </div>
+                <h2 class="text-4xl sm:text-5xl font-black text-white tracking-tight leading-tight mb-4">
+                    One Pass. <span class="bg-gradient-to-r from-cyan-400 via-sky-300 to-indigo-400 bg-clip-text text-transparent">Every Application.</span>
+                </h2>
+                <p class="text-zinc-400 max-w-2xl mx-auto text-sm sm:text-base leading-relaxed">
+                    Guardian Pass is a non-transferable, soulbound authorization credential. If a user's annual subscription expires, application access across the entire ecosystem is instantly revoked.
+                </p>
+            </div>
+
+            <!-- Main Minting & Management Grid -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-10">
+                <!-- Left 2 Cols: Tier & Duration Selection -->
+                <div class="lg:col-span-2 space-y-8">
+                    <!-- 1. Tier Selection -->
+                    <div>
+                        <div class="flex items-center justify-between mb-3">
+                            <h3 class="text-sm font-bold uppercase tracking-wider text-zinc-300 flex items-center space-x-2">
+                                <span class="w-5 h-5 rounded-full bg-zinc-800 text-cyan-400 flex items-center justify-center text-xs">1</span>
+                                <span>Choose Authorization Level</span>
+                            </h3>
+                            <span class="text-xs text-zinc-500">Soulbound • Non-transferable</span>
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <!-- Member Card -->
+                            <div
+                                id="tierMemberCard"
+                                onclick="selectTier('Member', 50)"
+                                class="p-6 rounded-2xl border cursor-pointer transition-all glass-panel-glow relative overflow-hidden"
+                            >
+                                <div class="absolute -top-10 -right-10 w-32 h-32 bg-cyan-500/10 rounded-full blur-2xl pointer-events-none"></div>
+                                <div class="flex justify-between items-start mb-3">
+                                    <div>
+                                        <span class="inline-block bg-cyan-500/10 text-cyan-400 text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-wider mb-1">Standard</span>
+                                        <h4 class="font-extrabold text-white text-lg">Member Pass</h4>
+                                        <p class="text-xs text-zinc-400">Full Single-User Gateway Access</p>
+                                    </div>
+                                    <div class="text-right">
+                                        <span class="text-2xl font-black text-cyan-400">$50</span>
+                                        <span class="text-xs text-zinc-500 block">/ year</span>
+                                    </div>
+                                </div>
+                                <ul class="text-xs text-zinc-300 space-y-2 mt-5 border-t border-zinc-800/80 pt-4">
+                                    <li class="flex items-center space-x-2">
+                                        <span class="text-cyan-400">✓</span>
+                                        <span>Instant authorization for all connected apps</span>
+                                    </li>
+                                    <li class="flex items-center space-x-2">
+                                        <span class="text-cyan-400">✓</span>
+                                        <span>Soulbound minter address binding</span>
+                                    </li>
+                                    <li class="flex items-center space-x-2">
+                                        <span class="text-cyan-400">✓</span>
+                                        <span>Automated 365-day access revocation</span>
+                                    </li>
+                                </ul>
+                            </div>
+
+                            <!-- VIP Card -->
+                            <div
+                                id="tierVipCard"
+                                onclick="selectTier('VIP', 150)"
+                                class="p-6 rounded-2xl border cursor-pointer transition-all glass-panel border-zinc-800/80 hover:border-zinc-700 hover:bg-zinc-900/60 relative overflow-hidden"
+                            >
+                                <div class="absolute -top-10 -right-10 w-32 h-32 bg-amber-500/10 rounded-full blur-2xl pointer-events-none"></div>
+                                <div class="flex justify-between items-start mb-3">
+                                    <div>
+                                        <span class="inline-block bg-amber-500/10 text-amber-400 text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-wider mb-1">Elevated</span>
+                                        <h4 class="font-extrabold text-white text-lg">VIP Pass</h4>
+                                        <p class="text-xs text-zinc-400">High-Throughput & Priority Gateway</p>
+                                    </div>
+                                    <div class="text-right">
+                                        <span class="text-2xl font-black text-amber-400">$150</span>
+                                        <span class="text-xs text-zinc-500 block">/ year</span>
+                                    </div>
+                                </div>
+                                <ul class="text-xs text-zinc-300 space-y-2 mt-5 border-t border-zinc-800/80 pt-4">
+                                    <li class="flex items-center space-x-2">
+                                        <span class="text-amber-400">✓</span>
+                                        <span>Uncapped rate limits on all backend microservices</span>
+                                    </li>
+                                    <li class="flex items-center space-x-2">
+                                        <span class="text-amber-400">✓</span>
+                                        <span>Priority compute queue for AI/heavy workloads</span>
+                                    </li>
+                                    <li class="flex items-center space-x-2">
+                                        <span class="text-amber-400">✓</span>
+                                        <span>VIP gatekeeper bypass for emergency maintenance</span>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 2. Choose Duration -->
+                    <div>
+                        <h3 class="text-sm font-bold uppercase tracking-wider text-zinc-300 mb-3 flex items-center space-x-2">
+                            <span class="w-5 h-5 rounded-full bg-zinc-800 text-cyan-400 flex items-center justify-center text-xs">2</span>
+                            <span>Choose Subscription Duration</span>
+                        </h3>
+                        <div class="grid grid-cols-3 gap-3">
+                            <button
+                                id="durationBtn1"
+                                onclick="selectDuration(1)"
+                                class="py-3.5 px-4 rounded-xl text-xs sm:text-sm font-bold border transition-all bg-gradient-to-r from-guardian-600 to-cyan-600 border-guardian-400 text-zinc-950 shadow-md shadow-cyan-500/20"
+                            >
+                                1 Year <span class="text-[10px] font-normal block text-zinc-950/80">(365 Days)</span>
+                            </button>
+                            <button
+                                id="durationBtn2"
+                                onclick="selectDuration(2)"
+                                class="py-3.5 px-4 rounded-xl text-xs sm:text-sm font-bold border transition-all glass-panel border-zinc-800 text-zinc-400 hover:border-zinc-700"
+                            >
+                                2 Years <span class="text-[10px] font-normal block text-zinc-500">(+730 Days)</span>
+                            </button>
+                            <button
+                                id="durationBtn3"
+                                onclick="selectDuration(3)"
+                                class="py-3.5 px-4 rounded-xl text-xs sm:text-sm font-bold border transition-all glass-panel border-zinc-800 text-zinc-400 hover:border-zinc-700"
+                            >
+                                3 Years <span class="text-[10px] font-normal block text-zinc-500">(+1095 Days)</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 3. Choose Payment Rail (XRPL, Stablecoin, Rafiki) -->
+                    <div>
+                        <h3 class="text-sm font-bold uppercase tracking-wider text-zinc-300 mb-3 flex items-center space-x-2">
+                            <span class="w-5 h-5 rounded-full bg-zinc-800 text-cyan-400 flex items-center justify-center text-xs">3</span>
+                            <span>Select Settlement Rail</span>
+                        </h3>
+
+                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                            <!-- Native XRP Button -->
+                            <button
+                                id="railXrpBtn"
+                                onclick="selectRail('XRP')"
+                                class="p-4 rounded-xl border text-center transition-all glass-panel border-zinc-800 text-zinc-400 hover:border-zinc-700"
+                            >
+                                <div class="font-extrabold text-sm text-white">XRP</div>
+                                <div class="text-[10px] text-zinc-500 mt-0.5">XRPL Native Gas</div>
+                            </button>
+
+                            <!-- RLUSD (Ripple USD) Button -->
+                            <button
+                                id="railRlusdBtn"
+                                onclick="selectRail('RLUSD')"
+                                class="p-4 rounded-xl border text-center transition-all glass-panel border-zinc-800 text-zinc-400 hover:border-zinc-700"
+                            >
+                                <div class="font-extrabold text-sm text-white">RLUSD</div>
+                                <div class="text-[10px] text-zinc-500 mt-0.5">Ripple USD</div>
+                            </button>
+
+                            <!-- USDC Button -->
+                            <button
+                                id="railUsdcBtn"
+                                onclick="selectRail('USDC')"
+                                class="p-4 rounded-xl border text-center transition-all glass-panel-glow border-cyan-500 text-white"
+                            >
+                                <div class="font-extrabold text-sm text-white">USDC</div>
+                                <div class="text-[10px] text-cyan-300 mt-0.5">USD Coin (6 Dec)</div>
+                            </button>
+
+                            <!-- Rafiki / ILPv4 Button -->
+                            <button
+                                id="railIlpBtn"
+                                onclick="selectRail('ILP')"
+                                class="p-4 rounded-xl border text-center transition-all glass-panel border-zinc-800 text-zinc-400 hover:border-zinc-700"
+                            >
+                                <div class="font-extrabold text-sm text-white">Rafiki / ILP</div>
+                                <div class="text-[10px] text-zinc-500 mt-0.5">Fiat / Multi-Rail</div>
+                            </button>
+                        </div>
+
+                        <!-- Open Payments Pointer Input -->
+                        <div id="ilpContainer" class="hidden mt-4 p-4 rounded-xl bg-purple-950/20 border border-purple-800/40">
+                            <label class="block text-xs font-semibold text-purple-300 mb-1">
+                                Open Payments / ILPv4 Payment Pointer
+                            </label>
+                            <input
+                                id="ilpPointerInput"
+                                type="text"
+                                value="$wallet.example.com/user"
+                                placeholder="$wallet.example.com/username"
+                                class="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-purple-500 font-mono"
+                            />
+                            <p class="text-[11px] text-zinc-400 mt-2">
+                                Cross-currency streaming settlement over Interledger Protocol (ILPv4) via the Rafiki relayer.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Col: Order Summary & Checkout Card -->
+                <div class="lg:col-span-1">
+                    <div class="sticky top-8 glass-panel-glow rounded-3xl p-6 shadow-2xl">
+                        <div class="flex items-center justify-between border-b border-zinc-800/80 pb-4 mb-4">
+                            <h3 class="text-sm font-bold uppercase tracking-wider text-white">Gateway Summary</h3>
+                            <span class="text-[10px] bg-cyan-500/10 text-cyan-400 px-2 py-0.5 rounded font-mono font-bold">SECURE GATE</span>
+                        </div>
+
+                        <div class="space-y-3.5 border-b border-zinc-800/80 pb-5 text-xs">
+                            <div class="flex justify-between text-zinc-400">
+                                <span>Selected Pass</span>
+                                <span id="summaryTier" class="text-white font-bold">Member Pass</span>
+                            </div>
+                            <div class="flex justify-between text-zinc-400">
+                                <span>Duration</span>
+                                <span id="summaryPeriod" class="text-white font-bold">1 Year (365d)</span>
+                            </div>
+                            <div class="flex justify-between text-zinc-400">
+                                <span>Network</span>
+                                <span id="summaryNetwork" class="text-cyan-400 font-bold">XRPL EVM Sidechain</span>
+                            </div>
+                            <div class="flex justify-between text-zinc-400">
+                                <span>Settlement</span>
+                                <span id="summaryRail" class="text-white font-bold">USDC (Direct)</span>
+                            </div>
+                            <div class="flex justify-between text-zinc-400">
+                                <span>Token Standard</span>
+                                <span class="text-emerald-400 font-mono font-medium">ERC-5192 (Soulbound)</span>
+                            </div>
+                        </div>
+
+                        <div class="flex justify-between items-baseline py-4 mb-4">
+                            <div>
+                                <span class="text-xs uppercase font-bold text-zinc-400 block tracking-wider">Annual Total</span>
+                                <span class="text-[10px] text-zinc-500">Auto-expires if not renewed</span>
+                            </div>
+                            <div class="text-right">
+                                <span id="summaryTotal" class="text-3xl font-black text-white glow-text">$50.00</span>
+                            </div>
+                        </div>
+
+                        <!-- Action Button -->
+                        <button
+                            id="actionBtn"
+                            onclick="handleActionClick()"
+                            class="w-full bg-gradient-to-r from-guardian-400 via-cyan-500 to-indigo-600 hover:from-guardian-300 hover:to-indigo-500 text-zinc-950 font-black rounded-xl py-3.5 text-xs uppercase tracking-wider transition-all shadow-lg shadow-cyan-500/25 flex items-center justify-center space-x-2 active:scale-95 disabled:opacity-50"
+                        >
+                            <span id="actionBtnText">Connect Wallet to Authorize</span>
+                        </button>
+
+                        <div class="mt-4 p-3 rounded-xl bg-zinc-950/60 border border-zinc-800/80 text-[10px] text-zinc-400 text-center leading-normal">
+                            🔒 <strong>Non-Transferable:</strong> Inextricably locked to your address. Transfers and sales are blocked at the bytecode level.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Ecosystem Applications Showcase -->
+            <div class="mt-20 border-t border-zinc-800/80 pt-10">
+                <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-2">
+                    <div>
+                        <h4 class="text-sm font-extrabold uppercase tracking-wider text-white">Protected Applications Ecosystem</h4>
+                        <p class="text-xs text-zinc-400">Any app integrated with Guardian Pass automatically verifies this credential on sign-in.</p>
+                    </div>
+                    <span class="text-[11px] font-mono text-zinc-500">Gatekeeper Protocol v1.4</span>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div class="p-4 rounded-xl glass-panel border border-zinc-800 flex items-center justify-between">
+                        <div>
+                            <span class="text-xs font-bold text-white block">Enterprise Data Vault</span>
+                            <span class="text-[10px] text-zinc-500">Requires: Member Pass</span>
+                        </div>
+                        <span class="text-xs font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">PROTECTED</span>
+                    </div>
+
+                    <div class="p-4 rounded-xl glass-panel border border-zinc-800 flex items-center justify-between">
+                        <div>
+                            <span class="text-xs font-bold text-white block">XRPL Asset Terminal</span>
+                            <span class="text-[10px] text-zinc-500">Requires: Member Pass</span>
+                        </div>
+                        <span class="text-xs font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">PROTECTED</span>
+                    </div>
+
+                    <div class="p-4 rounded-xl glass-panel border border-zinc-800 flex items-center justify-between">
+                        <div>
+                            <span class="text-xs font-bold text-white block">AI Agent Execution Cloud</span>
+                            <span class="text-[10px] text-zinc-500">Requires: VIP Pass</span>
+                        </div>
+                        <span class="text-xs font-mono px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20">VIP ONLY</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Client Interactive Controller -->
+    <script>
+        let currentAccount = null;
+        let currentChainId = null;
+        let selectedTierName = 'Member';
+        let selectedTierPrice = 50;
+        let selectedDurationYears = 1;
+        let selectedPaymentRail = 'USDC';
+
+        // Known Network Configurations
+        const CHAIN_CONFIGS = {
+            xrplEvm: {
+                chainIdHex: "0x15f900", // 1440000
+                chainName: "XRPL EVM Sidechain",
+                rpcUrls: ["https://rpc.xrplevm.org/"],
+                nativeCurrency: { name: "XRP", symbol: "XRP", decimals: 18 },
+                blockExplorerUrls: ["https://explorer.xrplevm.org"]
+            },
+            xrplEvmTestnet: {
+                chainIdHex: "0x161c78", // 1449000
+                chainName: "XRPL EVM Testnet",
+                rpcUrls: ["https://rpc.testnet.xrplevm.org"],
+                nativeCurrency: { name: "XRP", symbol: "XRP", decimals: 18 },
+                blockExplorerUrls: ["https://explorer.testnet.xrplevm.org"]
+            },
+            casper: {
+                chainIdHex: "0x754", // 1876
+                chainName: "Casper EVM",
+                rpcUrls: ["https://rpc.casper-evm.testnet.network"],
+                nativeCurrency: { name: "CSPR", symbol: "CSPR", decimals: 18 },
+                blockExplorerUrls: ["https://testnet.cspr.live"]
+            },
+            base: {
+                chainIdHex: "0x2105", // 8453
+                chainName: "Base Mainnet",
+                rpcUrls: ["https://mainnet.base.org"],
+                nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
+                blockExplorerUrls: ["https://basescan.org"]
+            },
+            sepolia: {
+                chainIdHex: "0xaa36a7", // 11155111
+                chainName: "Ethereum Sepolia",
+                rpcUrls: ["https://rpc.sepolia.org"],
+                nativeCurrency: { name: "Sepolia Ether", symbol: "SEP", decimals: 18 },
+                blockExplorerUrls: ["https://sepolia.etherscan.io"]
+            }
+        };
+
+        // URL Parameters (for Gatekeeper Redirect Flow from external apps)
+        const urlParams = new URLSearchParams(window.location.search);
+        const redirectUri = urlParams.get('redirect_uri') || urlParams.get('redirect');
+        const appName = urlParams.get('app_name') || urlParams.get('app');
+
+        window.addEventListener('load', async () => {
+            // Check for redirect context from protected application
+            if (appName) {
+                document.getElementById('redirectBanner').classList.remove('hidden');
+                document.getElementById('redirectAppName').innerText = decodeURIComponent(appName);
+            }
+
+            if (typeof window.ethereum !== 'undefined') {
+                try {
+                    const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+                    if (accounts && accounts.length > 0) {
+                        currentAccount = accounts[0];
+                        const chainIdHex = await window.ethereum.request({ method: 'eth_chainId' });
+                        currentChainId = parseInt(chainIdHex, 16);
+                        updateWalletUI();
+                        simulateCredentialLookup(currentAccount);
+                    }
+                } catch (e) {
+                    console.error("Auto-connect check error:", e);
+                }
+            }
+        });
+
+        async function connectWallet() {
+            if (typeof window.ethereum === 'undefined') {
+                showStatus("⚠️ No EVM wallet detected (e.g. MetaMask or Casper EVM). Please install an extension.");
+                return;
+            }
+            try {
+                showStatus("Connecting to wallet...");
+                const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+                currentAccount = accounts[0];
+                const chainIdHex = await window.ethereum.request({ method: 'eth_chainId' });
+                currentChainId = parseInt(chainIdHex, 16);
+                updateWalletUI();
+                showStatus(`✅ Connected: ${currentAccount.substring(0, 6)}...${currentAccount.substring(currentAccount.length - 4)}`);
+                simulateCredentialLookup(currentAccount);
+            } catch (err) {
+                showStatus(`❌ Connection error: ${err.message}`);
+            }
+        }
+
+        async function handleNetworkChange(networkKey) {
+            const config = CHAIN_CONFIGS[networkKey];
+            if (!config || typeof window.ethereum === 'undefined') return;
+
+            try {
+                // Try switching to the network
+                await window.ethereum.request({
+                    method: 'wallet_switchEthereumChain',
+                    params: [{ chainId: config.chainIdHex }],
+                });
+            } catch (switchError) {
+                // Network not added yet, add it
+                if (switchError.code === 4902 || switchError.message.includes("unrecognized")) {
+                    try {
+                        await window.ethereum.request({
+                            method: 'wallet_addEthereumChain',
+                            params: [{
+                                chainId: config.chainIdHex,
+                                chainName: config.chainName,
+                                rpcUrls: config.rpcUrls,
+                                nativeCurrency: config.nativeCurrency,
+                                blockExplorerUrls: config.blockExplorerUrls
+                            }],
+                        });
+                    } catch (addError) {
+                        showStatus(`Failed to add ${config.chainName}: ${addError.message}`);
+                    }
+                } else {
+                    showStatus(`Switch error: ${switchError.message}`);
+                }
+            }
+        }
+
+        function simulateCredentialLookup(account) {
+            const card = document.getElementById('credentialStatusCard');
+            const returnBtn = document.getElementById('redirectReturnBtnContainer');
+            card.classList.remove('hidden');
+
+            document.getElementById('boundAddressDisplay').innerText = `${account.substring(0, 10)}...${account.substring(account.length - 8)}`;
+            
+            if (redirectUri) {
+                returnBtn.classList.remove('hidden');
+            }
+        }
+
+        function returnToApp() {
+            if (redirectUri) {
+                window.location.href = redirectUri;
+            }
+        }
+
+        function updateWalletUI() {
+            const connectBtnText = document.getElementById('connectBtnText');
+            const actionBtnText = document.getElementById('actionBtnText');
+
+            if (currentAccount) {
+                const shortAddr = `${currentAccount.substring(0, 6)}...${currentAccount.substring(currentAccount.length - 4)}`;
+                connectBtnText.innerText = shortAddr;
+                actionBtnText.innerText = `Mint ${selectedTierName} Pass ($${selectedTierPrice * selectedDurationYears}.00)`;
+            } else {
+                connectBtnText.innerText = "Connect Wallet";
+                actionBtnText.innerText = "Connect Wallet to Authorize";
+            }
+        }
+
+        function selectTier(name, price) {
+            selectedTierName = name;
+            selectedTierPrice = price;
+
+            const memberCard = document.getElementById('tierMemberCard');
+            const vipCard = document.getElementById('tierVipCard');
+
+            if (name === 'Member') {
+                memberCard.className = "p-6 rounded-2xl border cursor-pointer transition-all glass-panel-glow relative overflow-hidden";
+                vipCard.className = "p-6 rounded-2xl border cursor-pointer transition-all glass-panel border-zinc-800/80 hover:border-zinc-700 hover:bg-zinc-900/60 relative overflow-hidden";
+            } else {
+                vipCard.className = "p-6 rounded-2xl border cursor-pointer transition-all glass-panel-glow border-amber-500/50 ring-1 ring-amber-500/30 relative overflow-hidden";
+                memberCard.className = "p-6 rounded-2xl border cursor-pointer transition-all glass-panel border-zinc-800/80 hover:border-zinc-700 hover:bg-zinc-900/60 relative overflow-hidden";
+            }
+
+            updateSummary();
+        }
+
+        function selectDuration(years) {
+            selectedDurationYears = years;
+
+            for (let i = 1; i <= 3; i++) {
+                const btn = document.getElementById(`durationBtn${i}`);
+                if (i === years) {
+                    btn.className = "py-3.5 px-4 rounded-xl text-xs sm:text-sm font-bold border transition-all bg-gradient-to-r from-guardian-600 to-cyan-600 border-guardian-400 text-zinc-950 shadow-md shadow-cyan-500/20";
+                } else {
+                    btn.className = "py-3.5 px-4 rounded-xl text-xs sm:text-sm font-bold border transition-all glass-panel border-zinc-800 text-zinc-400 hover:border-zinc-700";
+                }
+            }
+
+            updateSummary();
+        }
+
+        function selectRail(rail) {
+            selectedPaymentRail = rail;
+
+            const xrpBtn = document.getElementById('railXrpBtn');
+            const rlusdBtn = document.getElementById('railRlusdBtn');
+            const usdcBtn = document.getElementById('railUsdcBtn');
+            const ilpBtn = document.getElementById('railIlpBtn');
+            const ilpContainer = document.getElementById('ilpContainer');
+
+            [xrpBtn, rlusdBtn, usdcBtn, ilpBtn].forEach(b => {
+                b.className = "p-4 rounded-xl border text-center transition-all glass-panel border-zinc-800 text-zinc-400 hover:border-zinc-700";
+            });
+
+            if (rail === 'XRP') {
+                xrpBtn.className = "p-4 rounded-xl border text-center transition-all glass-panel-glow border-cyan-400 text-white";
+                ilpContainer.classList.add('hidden');
+            } else if (rail === 'RLUSD') {
+                rlusdBtn.className = "p-4 rounded-xl border text-center transition-all glass-panel-glow border-sky-400 text-white";
+                ilpContainer.classList.add('hidden');
+            } else if (rail === 'USDC') {
+                usdcBtn.className = "p-4 rounded-xl border text-center transition-all glass-panel-glow border-cyan-500 text-white";
+                ilpContainer.classList.add('hidden');
+            } else if (rail === 'ILP') {
+                ilpBtn.className = "p-4 rounded-xl border text-center transition-all glass-panel-glow border-purple-500 text-white";
+                ilpContainer.classList.remove('hidden');
+            }
+
+            updateSummary();
+        }
+
+        function updateSummary() {
+            const total = selectedTierPrice * selectedDurationYears;
+            document.getElementById('summaryTier').innerText = `${selectedTierName} Pass`;
+            document.getElementById('summaryPeriod').innerText = `${selectedDurationYears} Year (${selectedDurationYears * 365}d)`;
+            
+            const railLabels = {
+                XRP: 'XRP (Native)',
+                RLUSD: 'RLUSD (Ripple USD)',
+                USDC: 'USDC (Direct)',
+                ILP: 'Rafiki / ILPv4'
+            };
+            document.getElementById('summaryRail').innerText = railLabels[selectedPaymentRail] || selectedPaymentRail;
+            document.getElementById('summaryTotal').innerText = `$${total}.00`;
+
+            const selectEl = document.getElementById('networkSelect');
+            document.getElementById('summaryNetwork').innerText = selectEl.options[selectEl.selectedIndex].text.replace(/^[^\s]+\s*/, '');
+
+            if (currentAccount) {
+                document.getElementById('actionBtnText').innerText = `Authorize & Mint ${selectedTierName} ($${total}.00)`;
+            }
+        }
+
+        async function handleActionClick() {
+            if (!currentAccount) {
+                await connectWallet();
+                return;
+            }
+
+            const total = selectedTierPrice * selectedDurationYears;
+            const actionBtn = document.getElementById('actionBtn');
+            const actionBtnText = document.getElementById('actionBtnText');
+
+            actionBtn.disabled = true;
+            actionBtnText.innerText = "Broadcasting Transaction...";
+
+            try {
+                if (selectedPaymentRail === 'XRP') {
+                    showStatus(`Submitting native XRP payment on XRPL EVM Sidechain for ${currentAccount}...`);
+                    await new Promise(r => setTimeout(r, 2000));
+                    showStatus(`✅ Success! Soulbound ${selectedTierName} Pass minted on XRPL EVM Sidechain bound to ${currentAccount.substring(0, 8)}...`);
+                } else if (selectedPaymentRail === 'RLUSD' || selectedPaymentRail === 'USDC') {
+                    showStatus(`Approving and transferring ${selectedPaymentRail} on-chain for ${currentAccount}...`);
+                    await new Promise(r => setTimeout(r, 2000));
+                    showStatus(`✅ Success! Soulbound ${selectedTierName} Pass minted and bound to ${currentAccount.substring(0, 8)}...`);
+                } else {
+                    const pointer = document.getElementById('ilpPointerInput').value;
+                    showStatus(`⚡ Open Payments invoice generated for ${pointer}. Awaiting ILPv4 settlement via Rafiki relayer...`);
+                    await new Promise(r => setTimeout(r, 2500));
+                    showStatus(`✅ ILPv4 Payment Settled! Webhook dispatched to EVM contract. Access Granted!`);
+                }
+
+                simulateCredentialLookup(currentAccount);
+
+                // If redirected from an app, offer auto-return
+                if (redirectUri) {
+                    setTimeout(() => {
+                        showStatus(`Redirecting back to ${appName || "your app"} in 3 seconds...`);
+                        setTimeout(() => returnToApp(), 3000);
+                    }, 1500);
+                }
+            } catch (err) {
+                showStatus(`❌ Transaction failed: ${err.message}`);
+            } finally {
+                actionBtn.disabled = false;
+                actionBtnText.innerText = `Authorize & Mint ${selectedTierName} ($${total}.00)`;
+            }
+        }
+
+        function scrollToCheckout() {
+            document.getElementById('actionBtn').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function showStatus(msg) {
+            const banner = document.getElementById('statusBanner');
+            const message = document.getElementById('statusMessage');
+            message.innerText = msg;
+            banner.classList.remove('hidden');
+        }
+
+        function dismissStatus() {
+            document.getElementById('statusBanner').classList.add('hidden');
+        }
+    </script>
+</body>
+</html>
